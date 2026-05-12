@@ -98,7 +98,12 @@ def time_one_forward(model: ViT, x: torch.Tensor, device: torch.device) -> float
 
     TODO (you): implement the 6 steps above.
     """
-    raise NotImplementedError
+    cuda_sync(device)
+    start = time.perf_counter()
+    model(x)
+    cuda_sync(device)
+    end = time.perf_counter()
+    return end - start
 
 
 def benchmark_one(args: argparse.Namespace, patch_size: int, device: torch.device) -> dict:
@@ -112,7 +117,6 @@ def benchmark_one(args: argparse.Namespace, patch_size: int, device: torch.devic
     # specifies forward-only timing; without no_grad PyTorch builds the
     # autograd graph for every forward pass, which adds memory + a small
     # amount of compute overhead and is NOT representative of inference time.
-
     # TODO (you): run args.warmup_steps untimed forward passes of model(x).
     #
     # Why warmup matters:
@@ -123,16 +127,22 @@ def benchmark_one(args: argparse.Namespace, patch_size: int, device: torch.devic
     #   - On CPU, the first pass often pays an MKL/OpenMP thread-pool
     #     spin-up cost, less dramatic but still real.
     #   - Don't time these; just call model(x) and discard the output.
-
     # TODO (you): run args.timed_steps timed forward passes. Collect each
     # call's latency in seconds into a list (use `time_one_forward` above).
-
     # TODO (you): compute the mean and std of those latencies, converted
     # to milliseconds. The `statistics.mean` and `statistics.stdev` helpers
     # imported at the top are fine; or use a NumPy/torch one-liner.
-    mean_ms: float = ...   # TODO (you): replace `...` with your value
-    std_ms: float = ...    # TODO (you): replace `...` with your value
 
+    with torch.no_grad():
+        for _ in range(args.warmup_steps):
+            model(x)
+        latencies = []
+        for _ in range(args.timed_steps):
+            latency = time_one_forward(model, x, device)
+            latencies.append(latency)
+        mean_ms = mean(latencies) * 1000
+        std_ms = stdev(latencies) * 1000
+    
     return {
         "patch_size": patch_size,
         "num_patches": num_patches,
