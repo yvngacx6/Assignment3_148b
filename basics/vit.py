@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import torch
 import torch.nn as nn
+from basics.model import Block
 
 
 class PatchEmbeddings(nn.Module):
@@ -32,14 +33,31 @@ class PatchEmbeddings(nn.Module):
         self.img_size = img_size
         self.patch_size = patch_size
         self.num_patches = (img_size // patch_size) ** 2
-        # TODO: implement.
-        # Hint: use nn.Conv2d with kernel_size=patch_size, stride=patch_size,
-        # in_channels=3, out_channels=d_model. Then flatten the spatial dims
-        # and transpose so each patch is a token.
-        raise NotImplementedError
+
+        # TODO (you): define `self.proj` as a single `nn.Conv2d`.
+        #   - in_channels:  3 (RGB)
+        #   - out_channels: d_model
+        #   - kernel_size:  patch_size
+        #   - stride:       patch_size  (so windows don't overlap)
+
+        self.proj = nn.Conv2d(3, d_model, kernel_size=patch_size, stride=patch_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
+        # Input shape:  (B, 3, img_size, img_size)
+        # Target shape: (B, num_patches, d_model)
+
+        #   1) Apply self.proj.
+        #      shape: (B, 3, img_size, img_size) -> (B, d_model, H/P, W/P)
+        x = self.proj(x)
+        #   2) Flatten the trailing spatial dims into a single "patch" dim.
+        #      shape: (B, d_model, H/P, W/P)        -> (B, d_model, num_patches)
+        #      Hint: torch.Tensor.flatten(start_dim=...)
+        x = x.flatten(start_dim=2)
+        #   3) Move the d_model dim to the end so each row is one patch token.
+        #      shape: (B, d_model, num_patches)     -> (B, num_patches, d_model)
+        #      Hint: torch.Tensor.transpose(...)
+        x = x.transpose(1, 2)
+        return x
 
 
 class ViT(nn.Module):
@@ -75,7 +93,22 @@ class ViT(nn.Module):
         # Hint: store self.cls_token as nn.Parameter(torch.zeros(1, 1, d_model))
         # and self.pos_embed as nn.Parameter(torch.zeros(1, num_patches+1, d_model)).
         # Use basics.model.Block(..., is_decoder=False) for the encoder blocks.
-        raise NotImplementedError
+        self.patch_embeddings = PatchEmbeddings(img_size, patch_size, d_model)
+        self.num_patches = self.patch_embeddings.num_patches
+        self.d_model = d_model
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, d_model))
+        self.pos_embed = nn.Parameter(torch.zeros(1, self.num_patches + 1, d_model))
+        self.blocks = nn.ModuleList([Block(d_model, num_heads, block_size=self.num_patches + 1, is_decoder=False, dropout=dropout) for _ in range(num_blocks)])
+        self.ln = nn.LayerNorm(d_model)
+
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
+        x = self.patch_embeddings(x)
+        cls = self.cls_token.expand(x.size(0), -1, -1)
+        x = torch.cat([cls, x], dim=1)
+        x = x + self.pos_embed
+        for block in self.blocks:
+            x = block(x)
+        x = self.ln(x)
+        cls_output = x[:, 0, :]
+        return cls_output
