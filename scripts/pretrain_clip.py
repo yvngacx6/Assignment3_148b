@@ -85,7 +85,11 @@ def build_model(cfg: dict, device: torch.device) -> tuple[ViT, FrozenTextEncoder
         d_proj=cfg["projection"]["d_proj"],
     ).to(device)
 
-    logit_scale = init_logit_scale().to(device)
+    logit_scale = init_logit_scale()
+    # `nn.Parameter.to(device)` returns a non-leaf tensor when the device
+    # actually changes, which AdamW rejects. Move the underlying storage
+    # in-place so leaf-ness (and therefore optimizer eligibility) is preserved.
+    logit_scale.data = logit_scale.data.to(device)
     return vit, text_encoder, proj, logit_scale
 
 
