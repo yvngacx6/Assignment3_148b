@@ -188,52 +188,26 @@ def train_one_epoch(
     for step, (images, captions) in enumerate(loader):
         images = images.to(device, non_blocking=True)
 
-        # ------------------------------------------------------------------
-        # TODO(student): one CLIP training step.
-        #
-        #   1. Encode images:  feats_img = vit(images)            # (B, d_image)
-        #   2. Encode captions with the FROZEN text encoder
-        #      (it expects a python list[str] and returns (B, d_text)).
-        #      Make sure the result lives on `device`.
-        #   3. Project + L2-normalize via `proj(feats_img, feats_text)`
-        #      -> (img_proj, text_proj), each (B, d_proj).
-        #   4. Compute loss with `clip_loss(img_proj, text_proj, logit_scale)`.
-        #   5. Standard backprop:  zero_grad -> backward -> step.
-        #   6. Step the scheduler EACH STEP (cosine schedule is per-step).
-        #   7. Clamp logit_scale to <= ln(100) AFTER optimizer.step():
-        #         with torch.no_grad():
-        #             logit_scale.data.clamp_(max=math.log(100.0))
-        #   8. Record the scalar loss into `train_losses`.
-        # ------------------------------------------------------------------
-        
-        # get img embeddings
+        # Encode both modalities, project into the shared CLIP space, and
+        # optimize the symmetric InfoNCE objective.
         feats_img = vit(images)
 
-        # get text embeddings
         # `.clone()` escapes the inference-mode tagging that
         # sentence-transformers' .encode() applies to its outputs; without it,
         # the linear projection below cannot save its input for backward.
         feats_text = text_encoder(captions).clone()
 
-        # project and normalize
         img_proj, text_proj = proj(feats_img, feats_text)
-
-        # compute loss
         loss = clip_loss(img_proj, text_proj, logit_scale)
 
-        # backprop
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
-        # step scheduler
         scheduler.step()
 
-        # clamp logit scale
         with torch.no_grad():
             logit_scale.data.clamp_(max=math.log(100.0))
 
-        # record loss
         train_losses.append(loss.item())
 
         if step % log_every == 0:
@@ -329,17 +303,15 @@ def main() -> None:
                 f"val_acc={val_acc:.4f}  best={max(best_acc, val_acc):.4f}"
             )
 
-            # ----------------------------------------------------------------
-            # TODO(student): best-checkpoint rule.
-            #
-            #   If val_acc improves on best_acc, update best_acc and save the
-            #   model to args.output_dir / "best.pt" via save_checkpoint(...).
-            #   Pass extra={"epoch": epoch, "val_acc": val_acc}.
-            # ----------------------------------------------------------------
-
             if val_acc > best_acc:
                 best_acc = val_acc
-                save_checkpoint(args.output_dir / "best.pt", vit, proj, logit_scale, extra={"epoch": epoch, "val_acc": val_acc})
+                save_checkpoint(
+                    args.output_dir / "best.pt",
+                    vit,
+                    proj,
+                    logit_scale,
+                    extra={"epoch": epoch, "val_acc": val_acc},
+                )
 
     save_checkpoint(
         args.output_dir / "last.pt",

@@ -8,7 +8,7 @@
 - Course: EE/CS 148B (Spring 2026)
 - Started: 2026-05-09
 - Last updated: 2026-05-13
-- Current deliverable: §3.3 — `clip_train` (EuroSAT pretraining loop in `scripts/pretrain_clip.py`)
+- Current deliverable: §3.3 — `clip_zeroshot` (qualitative EuroSAT zero-shot analysis)
 
 ## Workflow contract
 
@@ -32,8 +32,8 @@ For each deliverable:
 | 4  | §2.4 vit_patch_size     | Patch-size sweep wall-clock timing table                         | DONE        | `scripts/bench_patch_size.py`, `writeup.tex` §1.4     | Tesla T4 numbers populated; analytical + discussion in §1.4 | 15.4× measured vs 256× pure-attention prediction |
 | 5  | §3.1 clip_setup         | Projection heads (image/text → 256, no bias, L2 norm)            | DONE        | `vlm/clip.py`                                         | (no direct pytest; visual review approved 2026-05-13) | uses `F.normalize(..., dim=-1)` for safe L2 |
 | 6  | §3.2 infonce            | `clip_loss` — symmetric InfoNCE                                  | DONE        | `vlm/clip.py`, `writeup.tex` §2.2                     | `pytest -k test_clip_loss` ✓ 4/4                    | both code + 2-sentence rationale approved 2026-05-13 |
-| 7  | §3.3 clip_train         | EuroSAT CLIP pretraining + train-loss & val-acc curves           | In progress | `scripts/pretrain_clip.py`, `configs/clip_eurosat.yaml` | run script, save curves                          | 20 epochs, batch 256, lr 3e-4, AdamW wd=0.1 |
-| 8  | §3.3 clip_zeroshot      | Qualitative: 5 correct + 5 wrong + top-3 mistakes                | Not started | `scripts/pretrain_clip.py` (or notebook)             | reuse trained checkpoint                            | 3–4 sentence discussion |
+| 7  | §3.3 clip_train         | EuroSAT CLIP pretraining + train-loss & val-acc curves           | DONE        | `scripts/pretrain_clip.py`, `configs/clip_eurosat.yaml`, `figures/clip_eurosat/*`, `writeup.tex` §2.3 | Colab run complete; curves saved; writeup populated | best val acc 91.77% at epoch 18; final 91.71% |
+| 8  | §3.3 clip_zeroshot      | Qualitative: 5 correct + 5 wrong + top-3 mistakes                | In progress | `scripts/eval_clip_zeroshot.py`, `writeup.tex` §2.4 | reuse trained checkpoint; run qualitative helper     | helper implemented; needs generated artifacts + discussion |
 | 9  | §4.1 lora_linear        | `LoRALinear` + `apply_lora_to_attention`                         | Not started | `basics/lora.py`                                      | `pytest -k test_lora_linear`, `pytest -k test_apply_lora` | print total/trainable/ratio at rank 8 |
 | 10 | §4.2 lora_compare       | RESISC45: linear probe vs LoRA r=8 vs full FT                    | Not started | `scripts/finetune_resisc.py`, `configs/lora_resisc.yaml` | 10 epochs each                                  | report acc, trainable params, peak mem, wall-clock |
 | 11 | §4.2 lora_rank          | LoRA rank sweep r ∈ {1,2,4,8,16,32,64}                           | Not started | `scripts/finetune_resisc.py`, `configs/lora_resisc.yaml` | 10 epochs per rank, α=2r                        | accuracy-vs-rank plot |
@@ -53,27 +53,25 @@ For each deliverable:
 
 ### Current deliverable
 
-#7 — §3.3 `clip_train` (EuroSAT CLIP pretraining loop in `scripts/pretrain_clip.py`).
+#8 — §3.3 `clip_zeroshot` (qualitative zero-shot analysis using the trained EuroSAT CLIP checkpoint).
 
 ### Status
 
-§2 fully closed (4/4 tests). §3.1 (`ProjectionHeads`) and §3.2 (`clip_loss`) both implemented and approved (4/4 `test_clip_loss` tests pass; writeup §2.2 InfoNCE rationale done). §3.3 scaffold landed in `scripts/pretrain_clip.py` 2026-05-13: plumbing (config load, seed, model build, AdamW, cosine+warmup LambdaLR, zero-shot eval wrapper, curve plotting, checkpoint helpers) is complete; **three TODO blocks remain** for the student to fill in.
+§2 fully closed (4/4 tests). §3.1 (`ProjectionHeads`) and §3.2 (`clip_loss`) both implemented and approved (4/4 `test_clip_loss` tests pass; writeup §2.2 InfoNCE rationale done). §3.3 `clip_train` is complete: the training loop ran for 20 epochs, the loss/validation curves are saved under `figures/clip_eurosat/`, and `writeup.tex` §2.3 now contains both figures plus the 2–3 sentence interpretation. `scripts/eval_clip_zeroshot.py` now implements the qualitative prediction/sampling/confusion helpers and writes selected-example JSON for the writeup table.
 
 ### Mode
 
-Waiting on user: fill the three `TODO(student)` blocks in `scripts/pretrain_clip.py`, then run the script (likely on Colab L4) and capture loss + zero-shot val accuracy curves.
+Waiting on user: run `scripts/eval_clip_zeroshot.py` against the trained checkpoint, inspect the generated correct/wrong montages and JSON, then populate `writeup.tex` §2.4.
 
 ### Files relevant to current deliverable
 
-- `hw3/scripts/pretrain_clip.py` — three open TODOs:
-  1. **CLIP training step** inside `train_one_epoch` (encode → project → `clip_loss` → backward → step → scheduler → `logit_scale.data.clamp_(max=ln 100)` → record loss).
-  2. **Best-checkpoint rule** inside `main` (compare `val_acc > best_acc`, update, call `save_checkpoint(args.output_dir / "best.pt", ...)`).
-  3. (Implicit, inside #1): the `logit_scale` clamp — easy to forget; the `clip_loss` docstring explicitly delegates this to the training loop.
-- `hw3/configs/clip_eurosat.yaml` — hyperparams (img_size 64, patch 8, d=384, 6 heads, 6 blocks, dropout 0.1; AdamW lr 3e-4 wd 0.1 betas (0.9, 0.95); 200-step warmup + cosine; 20 epochs, batch 256).
-- `hw3/vlm/data.py::build_eurosat_loaders` — yields `(images, list[str captions])` per batch.
-- `hw3/vlm/clip.py` — `ProjectionHeads`, `clip_loss`, `init_logit_scale` (all done).
-- `hw3/basics/text_encoder.py` — `FrozenTextEncoder(captions: list[str]) -> (B, embed_dim)`.
-- `hw3/vlm/eval.py::zeroshot_classification_accuracy` — provided; called from `evaluate_zeroshot` wrapper.
+- `hw3/scripts/pretrain_clip.py` — training/eval workflow used to produce the checkpoint and curves.
+- `hw3/scripts/eval_clip_zeroshot.py` — qualitative helper; runs validation zero-shot, saves correct/wrong montages, top-3 selected-example JSON, and confusion summaries.
+- `hw3/notebooks/colab_runner.ipynb` — Step 9 runs the qualitative helper on Colab and displays/stages generated artifacts.
+- `hw3/figures/clip_eurosat/train_loss.png` — §3.3 training-loss curve embedded in `writeup.tex`.
+- `hw3/figures/clip_eurosat/val_accuracy.png` — §3.3 zero-shot validation accuracy curve embedded in `writeup.tex`.
+- `hw3/figures/clip_eurosat/curves.json` — raw curve data; best val acc 91.77% at epoch 18.
+- `hw3/writeup.tex` — §2.3 populated; §2.4 qualitative zero-shot analysis remains.
 
 ### Files touched so far
 
@@ -83,13 +81,16 @@ Waiting on user: fill the three `TODO(student)` blocks in `scripts/pretrain_clip
 - `hw3/basics/vit.py` — `PatchEmbeddings` and `ViT` complete (4/4 tests pass)
 - `hw3/scripts/bench_patch_size.py` — §2.4 benchmark complete
 - `hw3/vlm/clip.py` — `ProjectionHeads`, `clip_loss`, `init_logit_scale` complete (4/4 tests pass)
-- `hw3/scripts/pretrain_clip.py` — §3.3 scaffold landed (2026-05-13); 3 TODOs remain
+- `hw3/scripts/pretrain_clip.py` — §3.3 training loop complete
+- `hw3/scripts/eval_clip_zeroshot.py` — §3.3 qualitative helper complete
+- `hw3/notebooks/colab_runner.ipynb` — Step 9 qualitative Colab runner added
+- `hw3/figures/clip_eurosat/` — §3.3 curves from Colab run
 
 ### Open TODOs
 
-- Fill the three `TODO(student)` blocks in `scripts/pretrain_clip.py`.
-- Run `uv run python scripts/pretrain_clip.py --config configs/clip_eurosat.yaml` on Colab (L4 recommended for §3) and capture the two PNGs + final val acc.
-- Embed both curves and a 1–2 sentence interpretation in `writeup.tex` §2.3.
+- Run Step 9 in `notebooks/colab_runner.ipynb` on Colab, or run `uv run python scripts/eval_clip_zeroshot.py --config configs/clip_eurosat.yaml --checkpoint runs/clip_eurosat/best.pt --output-dir figures/clip_eurosat_qualitative`.
+- Review `figures/clip_eurosat_qualitative/correct.png`, `wrong.png`, and `wrong_examples.json`.
+- Embed qualitative examples and a 3–4 sentence interpretation in `writeup.tex` §2.4.
 - Note for §5 later: deliverable #13 will add an optional `return_all_tokens=True` flag to `ViT.forward`.
 - Clean up: drop unused `MultiHeadAttention` import in `basics/vit.py` (if still present).
 
@@ -100,8 +101,9 @@ uv run pytest -k test_patch_embeddings -v   # 2 passed (2026-05-11)
 uv run pytest -k test_vit -v                # 4 passed (2026-05-11)
 uv run pytest -k test_clip_loss -v          # 4 passed (2026-05-13)
 # Colab T4 §2.4 benchmark completed 2026-05-12; numbers in writeup.tex §1.4 Table 1.
+# Colab §3.3 CLIP pretraining completed 2026-05-13; best val acc 91.77% at epoch 18.
 ```
 
 ### Waiting on user
 
-Attempt the three `TODO(student)` blocks in `scripts/pretrain_clip.py`. When you're done, ping me to review before kicking off the 20-epoch Colab run.
+Run the qualitative zero-shot helper against `runs/clip_eurosat/best.pt`, then ping me to help populate the qualitative figure/table and discussion in `writeup.tex`.

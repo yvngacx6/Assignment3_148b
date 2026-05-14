@@ -75,19 +75,19 @@ The loss is averaged in both directions because $\mathrm{CE}(S, y)$ and $\mathrm
 
 \begin{figure}[H]
     \centering
-    \fbox{\parbox[c][1.7in][c]{0.8\linewidth}{\centering \TODO{Insert training-loss curve.}}}
+    \includegraphics[width=0.82\linewidth]{figures/clip_eurosat/train_loss.png}
     \caption{CLIP pretraining loss on EuroSAT.}
     \label{fig:clip-train-loss}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \fbox{\parbox[c][1.7in][c]{0.8\linewidth}{\centering \TODO{Insert zero-shot validation accuracy curve.}}}
+    \includegraphics[width=0.82\linewidth]{figures/clip_eurosat/val_accuracy.png}
     \caption{Zero-shot validation accuracy during CLIP pretraining on EuroSAT.}
     \label{fig:clip-val-acc}
 \end{figure}
 
-\TODO{Write 2--3 sentences on how training loss and validation accuracy relate. Mention whether training loss keeps improving after validation accuracy plateaus.}
+The training loss decreases steadily from about $5.8$ at the start of training to about $3.3$ by the end, while zero-shot validation accuracy rises quickly in the first few epochs and then levels off near $92\%$. The best validation accuracy is $91.77\%$ at epoch 18, and the final epoch is essentially unchanged at $91.71\%$, so most of the validation improvement has saturated by the last few epochs. In contrast, the training loss continues to drift downward after the validation curve plateaus, suggesting the model is still fitting the contrastive training objective even though additional optimization is no longer translating into meaningful validation gains.
 
 \subsection{Qualitative Zero-Shot Analysis}
 
