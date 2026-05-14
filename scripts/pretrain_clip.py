@@ -201,7 +201,10 @@ def train_one_epoch(
         feats_img = vit(images)
 
         # get text embeddings
-        feats_text = text_encoder(captions)
+        # `.clone()` escapes the inference-mode tagging that
+        # sentence-transformers' .encode() applies to its outputs; without it,
+        # the linear projection below cannot save its input for backward.
+        feats_text = text_encoder(captions).clone()
 
         # project and normalize
         img_proj, text_proj = proj(feats_img, feats_text)
