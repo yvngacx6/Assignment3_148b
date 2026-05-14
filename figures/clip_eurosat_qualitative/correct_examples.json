@@ -1,0 +1,97 @@
+[
+  {
+    "true_class": "Herbaceous Vegetation",
+    "pred_class": "Herbaceous Vegetation",
+    "pred_score": 0.6878198981285095,
+    "top3_predictions": [
+      {
+        "class": "Herbaceous Vegetation",
+        "score": 0.6878198981285095
+      },
+      {
+        "class": "Pasture",
+        "score": 0.5723291039466858
+      },
+      {
+        "class": "Permanent Crop",
+        "score": 0.24439577758312225
+      }
+    ]
+  },
+  {
+    "true_class": "Industrial Buildings",
+    "pred_class": "Industrial Buildings",
+    "pred_score": 0.7166376113891602,
+    "top3_predictions": [
+      {
+        "class": "Industrial Buildings",
+        "score": 0.7166376113891602
+      },
+      {
+        "class": "Highway",
+        "score": 0.22302231192588806
+      },
+      {
+        "class": "River",
+        "score": 0.22123636305332184
+      }
+    ]
+  },
+  {
+    "true_class": "Permanent Crop",
+    "pred_class": "Permanent Crop",
+    "pred_score": 0.7252717018127441,
+    "top3_predictions": [
+      {
+        "class": "Permanent Crop",
+        "score": 0.7252717018127441
+      },
+      {
+        "class": "Annual Crop",
+        "score": 0.20570102334022522
+      },
+      {
+        "class": "Highway",
+        "score": 0.16838814318180084
+      }
+    ]
+  },
+  {
+    "true_class": "River",
+    "pred_class": "River",
+    "pred_score": 0.7063599824905396,
+    "top3_predictions": [
+      {
+        "class": "River",
+        "score": 0.7063599824905396
+      },
+      {
+        "class": "Pasture",
+        "score": 0.4025794565677643
+      },
+      {
+        "class": "Sea or Lake",
+        "score": 0.3432002663612366
+      }
+    ]
+  },
+  {
+    "true_class": "River",
+    "pred_class": "River",
+    "pred_score": 0.6409383416175842,
+    "top3_predictions": [
+      {
+        "class": "River",
+        "score": 0.6409383416175842
+      },
+      {
+        "class": "Annual Crop",
+        "score": 0.5194464325904846
+      },
+      {
+        "class": "Sea or Lake",
+        "score": 0.25913727283477783
+      }
+    ]
+  }
+]

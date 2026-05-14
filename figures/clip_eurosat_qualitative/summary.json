@@ -1,0 +1,7 @@
+{
+  "checkpoint": "runs/clip_eurosat/best.pt",
+  "split": "val",
+  "accuracy": 0.9176980198019802,
+  "num_images": 1616,
+  "num_classes": 10
+}

@@ -1,0 +1,97 @@
+[
+  {
+    "true_class": "Annual Crop",
+    "pred_class": "Sea or Lake",
+    "pred_score": 0.6195515990257263,
+    "top3_predictions": [
+      {
+        "class": "Sea or Lake",
+        "score": 0.6195515990257263
+      },
+      {
+        "class": "Pasture",
+        "score": 0.6051515340805054
+      },
+      {
+        "class": "Annual Crop",
+        "score": 0.48518162965774536
+      }
+    ]
+  },
+  {
+    "true_class": "Highway",
+    "pred_class": "Pasture",
+    "pred_score": 0.6434056758880615,
+    "top3_predictions": [
+      {
+        "class": "Pasture",
+        "score": 0.6434056758880615
+      },
+      {
+        "class": "River",
+        "score": 0.5971537828445435
+      },
+      {
+        "class": "Annual Crop",
+        "score": 0.5180927515029907
+      }
+    ]
+  },
+  {
+    "true_class": "Highway",
+    "pred_class": "Permanent Crop",
+    "pred_score": 0.6277018785476685,
+    "top3_predictions": [
+      {
+        "class": "Permanent Crop",
+        "score": 0.6277018785476685
+      },
+      {
+        "class": "Highway",
+        "score": 0.559919536113739
+      },
+      {
+        "class": "Herbaceous Vegetation",
+        "score": 0.4879312813282013
+      }
+    ]
+  },
+  {
+    "true_class": "Industrial Buildings",
+    "pred_class": "Permanent Crop",
+    "pred_score": 0.6758473515510559,
+    "top3_predictions": [
+      {
+        "class": "Permanent Crop",
+        "score": 0.6758473515510559
+      },
+      {
+        "class": "Industrial Buildings",
+        "score": 0.43874722719192505
+      },
+      {
+        "class": "Highway",
+        "score": 0.32095059752464294
+      }
+    ]
+  },
+  {
+    "true_class": "Pasture",
+    "pred_class": "Permanent Crop",
+    "pred_score": 0.6311426162719727,
+    "top3_predictions": [
+      {
+        "class": "Permanent Crop",
+        "score": 0.6311426162719727
+      },
+      {
+        "class": "Pasture",
+        "score": 0.5957628488540649
+      },
+      {
+        "class": "Annual Crop",
+        "score": 0.2518155574798584
+      }
+    ]
+  }
+]

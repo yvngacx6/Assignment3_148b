@@ -1,0 +1,29 @@
+[
+  {
+    "true_class": "Highway",
+    "accuracy": 0.82,
+    "support": 150,
+    "most_common_wrong_pred": [
+      "Industrial Buildings",
+      10
+    ]
+  },
+  {
+    "true_class": "Permanent Crop",
+    "accuracy": 0.8783783783783784,
+    "support": 148,
+    "most_common_wrong_pred": [
+      "Herbaceous Vegetation",
+      6
+    ]
+  },
+  {
+    "true_class": "Pasture",
+    "accuracy": 0.8823529411764706,
+    "support": 119,
+    "most_common_wrong_pred": [
+      "Annual Crop",
+      7
+    ]
+  }
+]
