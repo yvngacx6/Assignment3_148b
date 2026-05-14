@@ -50,16 +50,16 @@ Of the three options, attention pooling is most likely to perform best on spatia
         \toprule
         Patch size $P$ & Number of patches $N$ & Forward time mean (ms) & Forward time std (ms) \\
         \midrule
-        8  & \TODO{$N$} & \TODO{mean} & \TODO{std} \\
-        16 & \TODO{$N$} & \TODO{mean} & \TODO{std} \\
-        32 & \TODO{$N$} & \TODO{mean} & \TODO{std} \\
+        8  & 784 & 168.520 & 1.543 \\
+        16 & 196 & 29.957  & 0.306 \\
+        32 & 49  & 10.977  & 0.811 \\
         \bottomrule
     \end{tabular}
-    \caption{Forward-pass timing for a ViT with $d_{\mathrm{model}}=384$, 6 heads, 6 blocks, batch size 16, averaged over 20 measured steps after 5 warmup steps.}
+    \caption{Forward-pass timing for a ViT with $d_{\mathrm{model}}=384$, 6 heads, 6 blocks, batch size 16, on an NVIDIA Tesla T4. Averaged over 20 measured steps after 5 warmup steps.}
     \label{tab:vit-patch-size}
 \end{table}
 
-\TODO{Write a 2--3 sentence discussion. Include how attention cost changes as $P$ shrinks and when smaller patches are worth the extra compute.}
+For a $224\times 224$ image, $N=(224/P)^2$ gives $N=49,\,196,\,784$ for $P=32,\,16,\,8$; since halving $P$ quadruples $N$, the $O(N^2 d_{\mathrm{model}})$ self-attention cost grows $16\times$ per halving, so going from $P=32$ to $P=8$ multiplies attention compute by $256\times$. The measured wall-clock only grows $15.4\times$ over the same range, because each block's MLP cost is $O(N\cdot d^2)$ (linear in $N$) and dominates the attention term at $d_{\mathrm{model}}=384$, and because at $P=16$ and $P=32$ fixed per-forward overhead (Python dispatch and the head-by-head kernel launches in \texttt{MultiHeadAttention}) accounts for a non-trivial share of each step. Smaller patches are worth this extra cost when the downstream task hinges on fine spatial detail (OCR, segmentation, or counting small objects), where a coarser grid would smear the discriminative features into too few tokens to resolve.
 
 \section{CLIP-Style Contrastive Pretraining}
 
@@ -69,7 +69,7 @@ Of the three options, attention pooling is most likely to perform best on spatia
 
 \subsection{Symmetric InfoNCE Loss}
 
-\TODO{Write 1--2 sentences explaining why the CLIP loss is symmetric, i.e. why it averages image-to-text and text-to-image cross-entropy.}
+The loss is averaged in both directions because $\mathrm{CE}(S, y)$ and $\mathrm{CE}(S^\top, y)$ solve distinct retrieval tasks---image-to-text (softmax over the text axis: which caption matches this image?) and text-to-image (softmax over the image axis: which image matches this caption?). A one-directional loss could leave the opposite-direction retrieval undertrained, so the symmetric average ensures the model is good at retrieval in both directions, which is how it is used at deployment (text-prompted classification and image search by text query).
 
 \subsection{EuroSAT Pretraining}
 

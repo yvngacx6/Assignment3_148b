@@ -11,6 +11,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class ProjectionHeads(nn.Module):
@@ -31,13 +32,17 @@ class ProjectionHeads(nn.Module):
 
     def __init__(self, d_image: int, d_text: int, d_proj: int = 256) -> None:
         super().__init__()
-        # TODO: define self.image_proj, self.text_proj as nn.Linear(..., bias=False).
-        raise NotImplementedError
+        self.image_proj = nn.Linear(d_image, d_proj, bias=False)
+        self.text_proj = nn.Linear(d_text, d_proj, bias=False)
 
     def forward(
         self, image_embeds: torch.Tensor, text_embeds: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        raise NotImplementedError
+        image_proj = self.image_proj(image_embeds)
+        text_proj = self.text_proj(text_embeds)
+        image_proj = F.normalize(image_proj, dim=-1)
+        text_proj = F.normalize(text_proj, dim=-1)
+        return image_proj, text_proj
 
 
 def init_logit_scale() -> nn.Parameter:
@@ -70,5 +75,17 @@ def clip_loss(
     Returns:
         Scalar loss tensor.
     """
-    # TODO: implement.
-    raise NotImplementedError
+    #   Step 1: Build the target labels.
+    B = image_embeds.shape[0]
+    labels = torch.arange(B, device=image_embeds.device)
+
+    #   Step 2: Convert logit_scale to the actual scaling factor.
+    scale = logit_scale.exp()
+
+    #   Step 3: Build the (B, B) similarity matrix.
+    logits = image_embeds @ text_embeds.T * scale
+
+    #   Step 4: Symmetric cross-entropy.
+    loss_i2t = F.cross_entropy(logits, labels)
+    loss_t2i = F.cross_entropy(logits.T, labels)
+    return 0.5 * (loss_i2t + loss_t2i)

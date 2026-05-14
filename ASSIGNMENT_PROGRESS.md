@@ -7,8 +7,8 @@
 - Assignment PDF: `homework_pdfs/hw3.pdf`
 - Course: EE/CS 148B (Spring 2026)
 - Started: 2026-05-09
-- Last updated: 2026-05-11
-- Current deliverable: §2.4 — written `vit_pooling` (3–4 sentences) and empirical `vit_patch_size` (timing table)
+- Last updated: 2026-05-13
+- Current deliverable: §3.3 — `clip_train` (EuroSAT pretraining loop in `scripts/pretrain_clip.py`)
 
 ## Workflow contract
 
@@ -29,10 +29,10 @@ For each deliverable:
 | 1  | §2.2 patch_embeddings   | `PatchEmbeddings` module                                         | DONE        | `basics/vit.py`                                       | `uv run pytest -k test_patch_embeddings` ✓ 2/2      | strided Conv2d → flatten → transpose |
 | 2  | §2.3 vit                | `ViT` module (CLS + pos embed + Block stack + final LN)          | DONE        | `basics/vit.py`                                       | `uv run pytest -k test_vit` ✓ 2/2                   | use `basics.model.Block(is_decoder=False, block_size=N+1)` |
 | 3  | §2.4 vit_pooling        | Written: CLS vs mean pool vs attention pool                      | DONE        | `writeup.tex` §1.3                                    | —                                                   | 4 sentences, approved 2026-05-11 |
-| 4  | §2.4 vit_patch_size     | Patch-size sweep wall-clock timing table                         | In progress | new `scripts/bench_patch_size.py` (TBD), `writeup.tex` | timing on `B=16`, P∈{8,16,32}, d=384, H=6, L=6      | mean ± std over 20 steps after 5 warmup |
-| 5  | §3.1 clip_setup         | Projection heads (image/text → 256, no bias, L2 norm)            | Not started | `vlm/clip.py`                                         | (covered by clip_loss test indirectly)              | use provided `vlm/data.py`, `basics/text_encoder.py` |
-| 6  | §3.2 infonce            | `clip_loss` — symmetric InfoNCE                                  | Not started | `vlm/clip.py`                                         | `uv run pytest -k test_clip_loss`                   | parameterize τ as `exp(logit_scale)`, clamp ≤ ln(100) |
-| 7  | §3.3 clip_train         | EuroSAT CLIP pretraining + train-loss & val-acc curves           | Not started | `scripts/pretrain_clip.py`, `configs/clip_eurosat.yaml` | run script, save curves                          | 20 epochs, batch 256, lr 3e-4, AdamW wd=0.1 |
+| 4  | §2.4 vit_patch_size     | Patch-size sweep wall-clock timing table                         | DONE        | `scripts/bench_patch_size.py`, `writeup.tex` §1.4     | Tesla T4 numbers populated; analytical + discussion in §1.4 | 15.4× measured vs 256× pure-attention prediction |
+| 5  | §3.1 clip_setup         | Projection heads (image/text → 256, no bias, L2 norm)            | DONE        | `vlm/clip.py`                                         | (no direct pytest; visual review approved 2026-05-13) | uses `F.normalize(..., dim=-1)` for safe L2 |
+| 6  | §3.2 infonce            | `clip_loss` — symmetric InfoNCE                                  | DONE        | `vlm/clip.py`, `writeup.tex` §2.2                     | `pytest -k test_clip_loss` ✓ 4/4                    | both code + 2-sentence rationale approved 2026-05-13 |
+| 7  | §3.3 clip_train         | EuroSAT CLIP pretraining + train-loss & val-acc curves           | In progress | `scripts/pretrain_clip.py`, `configs/clip_eurosat.yaml` | run script, save curves                          | 20 epochs, batch 256, lr 3e-4, AdamW wd=0.1 |
 | 8  | §3.3 clip_zeroshot      | Qualitative: 5 correct + 5 wrong + top-3 mistakes                | Not started | `scripts/pretrain_clip.py` (or notebook)             | reuse trained checkpoint                            | 3–4 sentence discussion |
 | 9  | §4.1 lora_linear        | `LoRALinear` + `apply_lora_to_attention`                         | Not started | `basics/lora.py`                                      | `pytest -k test_lora_linear`, `pytest -k test_apply_lora` | print total/trainable/ratio at rank 8 |
 | 10 | §4.2 lora_compare       | RESISC45: linear probe vs LoRA r=8 vs full FT                    | Not started | `scripts/finetune_resisc.py`, `configs/lora_resisc.yaml` | 10 epochs each                                  | report acc, trainable params, peak mem, wall-clock |
@@ -53,46 +53,55 @@ For each deliverable:
 
 ### Current deliverable
 
-#3 — §2.4 `vit_pooling` (written, 3–4 sentences) and #4 — §2.4 `vit_patch_size` (table + 2–3 sentence discussion).
+#7 — §3.3 `clip_train` (EuroSAT CLIP pretraining loop in `scripts/pretrain_clip.py`).
 
 ### Status
 
-§2 code (`PatchEmbeddings` and `ViT`) complete; all 4 tests pass. §2.4 has two coupled written/empirical deliverables remaining before §2 is fully done.
+§2 fully closed (4/4 tests). §3.1 (`ProjectionHeads`) and §3.2 (`clip_loss`) both implemented and approved (4/4 `test_clip_loss` tests pass; writeup §2.2 InfoNCE rationale done). §3.3 scaffold landed in `scripts/pretrain_clip.py` 2026-05-13: plumbing (config load, seed, model build, AdamW, cosine+warmup LambdaLR, zero-shot eval wrapper, curve plotting, checkpoint helpers) is complete; **three TODO blocks remain** for the student to fill in.
 
 ### Mode
 
-Waiting on user: confirm compute target (local CUDA vs Colab vs CPU) for the §2.4 timing benchmark, and approve scaffolding for `scripts/bench_patch_size.py`.
+Waiting on user: fill the three `TODO(student)` blocks in `scripts/pretrain_clip.py`, then run the script (likely on Colab L4) and capture loss + zero-shot val accuracy curves.
 
-### Files relevant to current deliverables
+### Files relevant to current deliverable
 
-- `hw3/writeup.tex` — both §2.4 answers go here.
-- (new) `hw3/scripts/bench_patch_size.py` — wall-clock timing harness for the patch-size sweep. Doesn't exist yet.
-- `hw3/basics/vit.py` — used by the timing script (no further edits needed for §2.4).
+- `hw3/scripts/pretrain_clip.py` — three open TODOs:
+  1. **CLIP training step** inside `train_one_epoch` (encode → project → `clip_loss` → backward → step → scheduler → `logit_scale.data.clamp_(max=ln 100)` → record loss).
+  2. **Best-checkpoint rule** inside `main` (compare `val_acc > best_acc`, update, call `save_checkpoint(args.output_dir / "best.pt", ...)`).
+  3. (Implicit, inside #1): the `logit_scale` clamp — easy to forget; the `clip_loss` docstring explicitly delegates this to the training loop.
+- `hw3/configs/clip_eurosat.yaml` — hyperparams (img_size 64, patch 8, d=384, 6 heads, 6 blocks, dropout 0.1; AdamW lr 3e-4 wd 0.1 betas (0.9, 0.95); 200-step warmup + cosine; 20 epochs, batch 256).
+- `hw3/vlm/data.py::build_eurosat_loaders` — yields `(images, list[str captions])` per batch.
+- `hw3/vlm/clip.py` — `ProjectionHeads`, `clip_loss`, `init_logit_scale` (all done).
+- `hw3/basics/text_encoder.py` — `FrozenTextEncoder(captions: list[str]) -> (B, embed_dim)`.
+- `hw3/vlm/eval.py::zeroshot_classification_accuracy` — provided; called from `evaluate_zeroshot` wrapper.
 
 ### Files touched so far
 
 - `hw3/ASSIGNMENT_PROGRESS.md` (this file)
 - `hw3/` (cloned from `https://github.com/caltech-eecs148b/hw3`)
-- `hw3/writeup.tex` (scaffolded LaTeX template for written deliverables)
-- `hw3/basics/vit.py` — `PatchEmbeddings` and `ViT` complete (4/4 tests pass).
+- `hw3/writeup.tex` (§1.1–§1.4 + §2.2 InfoNCE rationale populated)
+- `hw3/basics/vit.py` — `PatchEmbeddings` and `ViT` complete (4/4 tests pass)
+- `hw3/scripts/bench_patch_size.py` — §2.4 benchmark complete
+- `hw3/vlm/clip.py` — `ProjectionHeads`, `clip_loss`, `init_logit_scale` complete (4/4 tests pass)
+- `hw3/scripts/pretrain_clip.py` — §3.3 scaffold landed (2026-05-13); 3 TODOs remain
 
 ### Open TODOs
 
-- Decide compute target for §2.4 timing: local CUDA / Colab / CPU fallback.
-- Scaffold `scripts/bench_patch_size.py` (CLI: patch sizes, batch size, warmup, num steps; output: mean ± std table). Will use `torch.cuda.synchronize()` if CUDA available, `time.perf_counter()` otherwise.
-- Answer `vit_pooling` (3–4 sentences) in `writeup.tex`.
-- Run benchmark, fill `vit_patch_size` table + 2–3 sentence discussion in `writeup.tex`.
+- Fill the three `TODO(student)` blocks in `scripts/pretrain_clip.py`.
+- Run `uv run python scripts/pretrain_clip.py --config configs/clip_eurosat.yaml` on Colab (L4 recommended for §3) and capture the two PNGs + final val acc.
+- Embed both curves and a 1–2 sentence interpretation in `writeup.tex` §2.3.
 - Note for §5 later: deliverable #13 will add an optional `return_all_tokens=True` flag to `ViT.forward`.
-- Clean up: drop unused `MultiHeadAttention` import in `basics/vit.py`.
+- Clean up: drop unused `MultiHeadAttention` import in `basics/vit.py` (if still present).
 
 ### Tests run
 
 ```bash
 uv run pytest -k test_patch_embeddings -v   # 2 passed (2026-05-11)
-uv run pytest -k test_vit -v                # 4 passed (2026-05-11) — both ViT tests + the 2 patch tests
+uv run pytest -k test_vit -v                # 4 passed (2026-05-11)
+uv run pytest -k test_clip_loss -v          # 4 passed (2026-05-13)
+# Colab T4 §2.4 benchmark completed 2026-05-12; numbers in writeup.tex §1.4 Table 1.
 ```
 
 ### Waiting on user
 
-1. Where will you run the §2.4 timing benchmark? (local CUDA GPU / Colab / CPU only)
-2. Want me to scaffold `scripts/bench_patch_size.py`, or attempt cold? (For the written `vit_pooling` answer I'll wait until you've thought about it; we can discuss before you write it down.)
+Attempt the three `TODO(student)` blocks in `scripts/pretrain_clip.py`. When you're done, ping me to review before kicking off the 20-epoch Colab run.

@@ -113,26 +113,6 @@ def benchmark_one(args: argparse.Namespace, patch_size: int, device: torch.devic
     x = torch.randn(args.batch_size, 3, args.img_size, args.img_size, device=device)
     num_patches = (args.img_size // patch_size) ** 2
 
-    # TODO (you): wrap everything below in `torch.no_grad()`. The writeup
-    # specifies forward-only timing; without no_grad PyTorch builds the
-    # autograd graph for every forward pass, which adds memory + a small
-    # amount of compute overhead and is NOT representative of inference time.
-    # TODO (you): run args.warmup_steps untimed forward passes of model(x).
-    #
-    # Why warmup matters:
-    #   - On CUDA, the first 1-2 forward passes pay a one-time cost for
-    #     kernel compilation, autotuning of cuBLAS GEMM algorithms, and
-    #     priming of memory allocator caches. These are 2x-10x slower than
-    #     steady state and would skew the mean badly if included.
-    #   - On CPU, the first pass often pays an MKL/OpenMP thread-pool
-    #     spin-up cost, less dramatic but still real.
-    #   - Don't time these; just call model(x) and discard the output.
-    # TODO (you): run args.timed_steps timed forward passes. Collect each
-    # call's latency in seconds into a list (use `time_one_forward` above).
-    # TODO (you): compute the mean and std of those latencies, converted
-    # to milliseconds. The `statistics.mean` and `statistics.stdev` helpers
-    # imported at the top are fine; or use a NumPy/torch one-liner.
-
     with torch.no_grad():
         for _ in range(args.warmup_steps):
             model(x)
@@ -142,7 +122,7 @@ def benchmark_one(args: argparse.Namespace, patch_size: int, device: torch.devic
             latencies.append(latency)
         mean_ms = mean(latencies) * 1000
         std_ms = stdev(latencies) * 1000
-    
+
     return {
         "patch_size": patch_size,
         "num_patches": num_patches,
