@@ -112,6 +112,15 @@ def build_optimizer(
 
 def save_curves(train_losses: list[float], val_accs: list[float], output_dir: Path) -> None:
     """Write loss + accuracy PNGs and a JSON dump of the raw numbers."""
+    # Colab injects MPLBACKEND="module://matplotlib_inline.backend_inline" into
+    # subprocess envs. That backend only works inside a Jupyter kernel; recent
+    # matplotlib versions reject it at import time when run from plain python.
+    # Clear the env var and force the headless 'Agg' backend before any
+    # matplotlib import.
+    import os
+    os.environ.pop("MPLBACKEND", None)
+    import matplotlib
+    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
     output_dir.mkdir(parents=True, exist_ok=True)
